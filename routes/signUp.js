@@ -6,7 +6,6 @@ let router = express.Router();
 router.post('/', async (req, res) => {
     let name = req.body && req.body.user;
     let pwd = req.body && req.body.pwd;
-    let err, result;
 
     if (!name || !pwd) {
         res.json({ success: false, msg: '用户名或密码不能为空' });
@@ -18,7 +17,7 @@ router.post('/', async (req, res) => {
         res.json({ success: false, msg: '用户名已存在' });
         return;
     }
-    [err, result] = await to(signUp(name, pwd));
+    let [err, result] = await to(signUp(name, pwd));
     if (err) {
         res.json({ success: false, msg: err.message });
     } else {
