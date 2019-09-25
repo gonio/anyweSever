@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+<script type="text/javascript">
+    const ws = new WebSocket('ws://localhost:3000/ws');
+    ws.onopen = function () {
+        // Web Socket 已连接上，使用 send() 方法发送数据
+        ws.send('发送数据');
+        window.console.log('数据发送中...');
+    };
+
+    ws.onmessage = function (evt) {
+        const receivedMsg = evt.data;
+        window.console.log(`数据已接收...${receivedMsg}`);
+    };
+
+    ws.onclose = function () {
+        // 关闭 websocket
+        window.console.log('连接已关闭...');
+    };
+</script>
+</html>

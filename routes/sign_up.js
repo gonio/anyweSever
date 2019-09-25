@@ -17,7 +17,7 @@ router.post('/', async (req, res) => {
         res.json({ success: false, msg: '用户名已存在' });
         return;
     }
-    let [err, result] = await to(signUp(name, pwd));
+    let [err, result] = await to(sign_up(name, pwd));
     if (err) {
         res.json({ success: false, msg: err.message });
     } else {
@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
  * @param pwd
  * @returns {Promise<*>}
  */
-function signUp (name = '', pwd = '') {
+function sign_up (name = '', pwd = '') {
     if (name === '' || pwd === '') {
         return new Promise(function (resolve, reject) {
             setTimeout(() => reject(new Error('用户名或密码不能为空')), 0);
