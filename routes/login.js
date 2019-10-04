@@ -21,7 +21,12 @@ router.post('/', async (req, res) => {
     }
     req.session.name = name;
     req.session.lastTime = new Date().getTime();
-    res.json({ success: true });
+    res.json({
+        success: true,
+        data: {
+            userName: name, isLogin: true
+        }
+    });
 });
 
 module.exports = router;

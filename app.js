@@ -24,7 +24,8 @@ function init () {
     let login = require('./routes/login');
     let signUp = require('./routes/sign_up');
     let init = require('./routes/init');
-    let ws = require('./routes/ws');
+    let room = require('./routes/room');
+    let { ws } = require('./routes/ws');
 
     // uncomment after placing your favicon in /public
     // app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -48,6 +49,7 @@ function init () {
     app.use('/login', login);
     // app.use('/init', init);
     app.use('/init', init);
+    app.use('/room', room);
     app.use('/ws', ws);
 
     // catch 404 and forward to error handler

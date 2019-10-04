@@ -1,6 +1,6 @@
 let express = require('express');
 let userModel = require('../models/user');
-let to = require('../util/to');
+let { to} = require('../util/utils');
 let router = express.Router();
 
 router.post('/', async (req, res) => {
