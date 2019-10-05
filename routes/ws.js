@@ -4,6 +4,7 @@ const { json2 } = require('../util/utils');
 const router = express.Router();
 
 const rooms = {}; // 房间列表 -> 玩家信息
+const roomsInterval = {}; // 房间列表 -> 定时器
 const wsList = {}; // 玩家 -> 玩家ws
 const playerMap = {}; // 玩家 -> 玩家房主id
 
@@ -28,6 +29,12 @@ router.ws('/link', (ws, req) => {
             return;
         }
 
+        // 房主踢人
+        if (data.type === 'kick') {
+            kick(data);
+            return;
+        }
+
         if (data.isRoomOwner) {
             if (!rooms.hasOwnProperty(req.session.name)) {
                 rooms[req.session.name] = {
@@ -38,14 +45,14 @@ router.ws('/link', (ws, req) => {
                     players: [{ name: req.session.name, isOwner: true }]
                 };
             }
-            playerMap[req.session.name] = data.roomID;
+            playerMap[req.session.name] = req.session.name;
             ws.send(json2(rooms[req.session.name]));
         } else {
             if (!rooms[data.roomID]) {
                 ws.send(json2({}, false));
                 return;
             }
-            rooms[data.roomID].players.push({ name: req.session.name, isOwner: false });
+            rooms[data.roomID].players.push({ name: req.session.name, isOwner: false, isReady: false });
             playerMap[req.session.name] = data.roomID;
             ws.send(json2(rooms[data.roomID]));
             _.each(rooms[data.roomID].players, player => {
@@ -68,22 +75,60 @@ router.ws('/link', (ws, req) => {
         _.each(wsList, ws => {
             ws.send(json2({ type: 'start' }));
         });
+
+        // 1s同步一次
+        clearInterval(roomsInterval[data.roomID]);
+        roomsInterval[data.roomID] = setInterval(function () {
+            _.each(rooms[data.roomID].players, player => {
+                wsList[player.name].send(json2(rooms[data.roomID]));
+            });
+        }, 1000);
     }
 
     /**
      * 更新游戏信息
      * @param data
      */
-    function update (data) {
+    function update (data = {}) {
 
         // 房间不存在
+        const currentData = rooms[playerMap[req.session.name]];
         if (!rooms[playerMap[req.session.name]]) {
             ws.send(json2({}, false, '游戏已结束'));
             return;
         }
+
+        // 替换成新的状态
+        if (!_.isEmpty(data)) {
+            _.some(currentData.players, player => {
+                if (player.name === req.session.name) {
+                    Object.assign(player, data);
+                    return true;
+                }
+            });
+        }
+
         _.each(wsList, ws => {
-            ws.send(json2({ type: 'update', players: rooms[playerMap[req.session.name]].players }));
+            ws.send(json2({ type: 'update', players: currentData.players }));
         });
+    }
+
+    /**
+     * 踢人
+     * @param data
+     */
+    function kick (data) {
+
+        // 是房主才能踢人
+        if (!rooms[req.session.name]) {
+            ws.send(json2({}, false, '您不是房主'));
+            return;
+        }
+
+        const currentData = rooms[req.session.name];
+        currentData.players = _.filter(currentData.players, player => player.name !== data.id);
+
+        update();
     }
 
     // 退游

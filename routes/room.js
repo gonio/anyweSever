@@ -7,7 +7,7 @@ router.post('/list', async (req, res) => {
     if (req.session.name) {
         res.json(json(Object.values(rooms).map(item => item.info)));
     } else {
-        res.json(json({ isLogin: false }, false));
+        res.json(json({ isLogin: false }));
     }
 });
 
