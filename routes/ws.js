@@ -25,6 +25,7 @@ router.ws('/link', (ws, req) => {
 
         // 需要通知所有玩家
         if (data.type === 'update') {
+            delete data.type;
             update(data);
             return;
         }
@@ -42,7 +43,7 @@ router.ws('/link', (ws, req) => {
                         title: '房间',
                         id: req.session.name
                     },
-                    players: [{ name: req.session.name, isOwner: true }]
+                    players: [{ name: req.session.name, isOwner: true, map: {} }]
                 };
             }
             playerMap[req.session.name] = req.session.name;
@@ -52,7 +53,7 @@ router.ws('/link', (ws, req) => {
                 ws.send(json2({}, false));
                 return;
             }
-            rooms[data.roomID].players.push({ name: req.session.name, isOwner: false, isReady: false });
+            rooms[data.roomID].players.push({ name: req.session.name, isOwner: false, isReady: false, map: {} });
             playerMap[req.session.name] = data.roomID;
             ws.send(json2(rooms[data.roomID]));
             _.each(rooms[data.roomID].players, player => {
@@ -72,8 +73,18 @@ router.ws('/link', (ws, req) => {
             ws.send(json2({}, false, '您不是房主'));
             return;
         }
-        _.each(wsList, ws => {
-            ws.send(json2({ type: 'start' }));
+
+        // 校验参数
+        if (!data.roomID || !rooms[data.roomID]) {
+            ws.send(json2({}, false, '参数错误'));
+            return;
+        }
+
+        // 更新所有人的信息，然后开始游戏
+        updateAll({ map: data.map });
+
+        _.each(wsList, (ws, name) => {
+            ws.send(json2({ type: 'start', players: _.filter(rooms[data.roomID].players, item => item.name !== name) }));
         });
 
         // 1s同步一次
@@ -82,21 +93,22 @@ router.ws('/link', (ws, req) => {
             _.each(rooms[data.roomID].players, player => {
                 wsList[player.name].send(json2(rooms[data.roomID]));
             });
-        }, 1000);
+        }, 2000);
     }
 
     /**
      * 更新游戏信息
      * @param data
+     * @param broadcast
      */
     function update (data = {}) {
 
         // 房间不存在
-        const currentData = rooms[playerMap[req.session.name]];
-        if (!rooms[playerMap[req.session.name]]) {
-            ws.send(json2({}, false, '游戏已结束'));
+        if (!checkRoomExist(req)) {
             return;
         }
+
+        const currentData = rooms[playerMap[req.session.name]];
 
         // 替换成新的状态
         if (!_.isEmpty(data)) {
@@ -111,6 +123,27 @@ router.ws('/link', (ws, req) => {
         _.each(wsList, ws => {
             ws.send(json2({ type: 'update', players: currentData.players }));
         });
+    }
+
+    /**
+     * 更新房间所有人的信息
+     * @param data
+     */
+    function updateAll (data) {
+
+        // 房间不存在
+        if (!checkRoomExist(req)) {
+            return;
+        }
+
+        const currentData = rooms[playerMap[req.session.name]];
+
+        // 替换成新的状态
+        if (!_.isEmpty(data)) {
+            _.each(currentData.players, player => {
+                Object.assign(player, data);
+            });
+        }
     }
 
     /**
@@ -152,7 +185,18 @@ router.ws('/link', (ws, req) => {
         delete rooms[req.session.name];
         delete wsList[req.session.name];
         delete playerMap[req.session.name];
+        clearInterval(roomsInterval[req.session.name]);
     });
 });
 
 module.exports = { ws: router, rooms };
+
+function checkRoomExist (req) {
+
+    // 房间不存在
+    if (!rooms[playerMap[req.session.name]]) {
+        ws.send(json2({}, false, '游戏已结束'));
+        return false;
+    }
+    return true;
+}
