@@ -36,6 +36,12 @@ router.ws('/link', (ws, req) => {
             return;
         }
 
+        // 有人赢了，游戏结束
+        if (data.type === 'win') {
+            over(data);
+            return;
+        }
+
         if (data.isRoomOwner) {
             if (!rooms.hasOwnProperty(req.session.name)) {
                 rooms[req.session.name] = {
@@ -164,6 +170,22 @@ router.ws('/link', (ws, req) => {
         update();
     }
 
+    /**
+     * 游戏结束
+     * @param data
+     */
+    function over (data) {
+
+        // 房间不存在
+        if (!checkRoomExist(req)) {
+            return;
+        }
+
+        const room = rooms[playerMap[req.session.name]];
+        _.each(room.players, player => wsList[player.name].send(json2({ type: 'over', name: req.session.name })));
+        clearInterval(roomsInterval[req.session.name]);
+    }
+
     // 退游
     ws.on('close', () => {
         // 不是房主退出，则更新其他玩家
@@ -176,7 +198,7 @@ router.ws('/link', (ws, req) => {
             });
         } else {
             if (rooms[playerMap[req.session.name]]) {
-                let room = rooms[playerMap[req.session.name]];
+                const room = rooms[playerMap[req.session.name]];
                 room.players = _.filter(room.players, player => player.name !== req.session.name);
                 _.each(room.players, player => wsList[player.name].send(json2({ type: 'update', players: room.players })));
             }
