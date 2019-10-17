@@ -46,7 +46,7 @@ router.ws('/link', (ws, req) => {
             if (!rooms.hasOwnProperty(req.session.name)) {
                 rooms[req.session.name] = {
                     info: {
-                        title: '房间',
+                        title: data.title,
                         id: req.session.name
                     },
                     players: [{ name: req.session.name, isOwner: true, map: {} }]
@@ -105,7 +105,6 @@ router.ws('/link', (ws, req) => {
     /**
      * 更新游戏信息
      * @param data
-     * @param broadcast
      */
     function update (data = {}) {
 
